@@ -19,6 +19,7 @@ export interface Token {
     address: string
     tags: Set<Tag>
     decimals: number | null
+    holders: number | null
 }
 
 export abstract class Provider {

@@ -59,6 +59,7 @@ export class LegacyTokenProvider extends Provider {
             batchAccountsInfo: 250, // Batch RPC calls in single RPC request
             batchTokenHolders: 5, // Batch parallel RPC requests
         },
+        private readonly skipTags: Tag[],
         private readonly chainId: number = 101, // Filter by chain id
         private readonly signatureDays = 30, // Filter tokens by last signature date
         private readonly minHolders = 100 // Filter tokens by number holders
@@ -74,7 +75,10 @@ export class LegacyTokenProvider extends Provider {
             const token: LegacyListToken = tokens.data.tokens[i]
 
             // Get only tokens for mainnet and devnet
-            if (this.chainId === token.chainId) {
+            if (
+                this.chainId === token.chainId &&
+                !_.intersection(token.tags, this.skipTags).length
+            ) {
                 tokenMap.set(token.address, {
                     name: token.name,
                     symbol: token.symbol,
@@ -83,6 +87,7 @@ export class LegacyTokenProvider extends Provider {
                     logoURI: token.logoURI,
                     tags: new Set<Tag>(token.tags),
                     verified: true,
+                    holders: null,
                 })
             }
         }
@@ -93,7 +98,7 @@ export class LegacyTokenProvider extends Provider {
             'please ignore',
         ])
         await this.filterAccountInfo(tokenMap)
-        await this.filterLatestSignature(tokenMap)
+        // await this.filterLatestSignature(tokenMap)
         await this.filterHolders(tokenMap)
         return tokenMap
     }
@@ -292,6 +297,14 @@ export class LegacyTokenProvider extends Provider {
                     LARGEST_MINST.includes(mint) ||
                     cachedLargeTokens.has(mint)
                 ) {
+                    const token = tokenMap.get(mint)
+                    if (token) {
+                        token.holders = LARGEST_MINST.includes(mint)
+                            ? 100000
+                            : (cachedLargeTokens.get(mint) as number)
+                        tokenMap.set(mint, token)
+                    }
+
                     continue
                 }
 
@@ -324,6 +337,13 @@ export class LegacyTokenProvider extends Provider {
 
                     if (count >= 1000) {
                         cachedLargeTokens.set(mint, count)
+                    }
+
+                    // Update decimals for token
+                    const token = tokenMap.get(mint)
+                    if (token) {
+                        token.holders = count
+                        tokenMap.set(mint, token)
                     }
                 } else {
                     throw new Error(

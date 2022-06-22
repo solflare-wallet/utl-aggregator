@@ -58,6 +58,7 @@ export class CoinGeckoProvider extends Provider {
                     logoURI: null,
                     tags: new Set<Tag>(),
                     verified: true,
+                    holders: null,
                 })
             }
         }

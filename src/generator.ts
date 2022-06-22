@@ -19,6 +19,9 @@ export class Generator {
                 if (!currentToken.logoURI && token.logoURI) {
                     currentToken.logoURI = token.logoURI
                 }
+                if (!currentToken.tags && token.tags) {
+                    currentToken.tags = token.tags
+                }
                 tokenMints.set(mintAddress, currentToken)
             } else {
                 tokenMints.set(mintAddress, token)
@@ -79,7 +82,7 @@ export class Generator {
             tags,
             timestamp: new Date().toISOString(),
             tokens: tokensArray.map((token) => {
-                return { chainId, ...token }
+                return { ...token, chainId, tags: [...token.tags] }
             }),
         }
     }
