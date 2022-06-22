@@ -59,7 +59,7 @@ export class LegacyTokenProvider extends Provider {
             batchAccountsInfo: 250, // Batch RPC calls in single RPC request
             batchTokenHolders: 5, // Batch parallel RPC requests
         },
-        private readonly skipTags: Tag[],
+        private readonly skipTags: Tag[], // Filter out specific tags
         private readonly chainId: number = 101, // Filter by chain id
         private readonly signatureDays = 30, // Filter tokens by last signature date
         private readonly minHolders = 100 // Filter tokens by number holders
@@ -98,7 +98,7 @@ export class LegacyTokenProvider extends Provider {
             'please ignore',
         ])
         await this.filterAccountInfo(tokenMap)
-        // await this.filterLatestSignature(tokenMap)
+        await this.filterLatestSignature(tokenMap)
         await this.filterHolders(tokenMap)
         return tokenMap
     }
