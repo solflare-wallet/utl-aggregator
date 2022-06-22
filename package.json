@@ -1,0 +1,35 @@
+{
+  "main": "lib/cjs/index.js",
+  "module": "lib/esm/index.js",
+  "scripts": {
+    "start:esm": "tsc --watch",
+    "start:cjs": "tsc --project tsconfig.cjs.json --watch",
+    "start": "npm-run-all -p start:esm start:cjs",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build": "npm run build:esm && npm run build:cjs",
+    "deploy": "npm run build && npm publish --access private"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.44.0",
+    "@types/axios": "^0.14.0",
+    "@types/lodash": "^4.14.182",
+    "axios": "^0.27.2",
+    "axios-retry": "^3.2.5",
+    "lodash": "^4.17.21",
+    "temp-dir": "^2.0.0",
+    "typescript": "^4.6.4"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.25.0",
+    "@typescript-eslint/parser": "^5.25.0",
+    "eslint": "^8.15.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-node": "^11.1.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.6.2"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

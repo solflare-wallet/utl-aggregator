@@ -1,0 +1,26 @@
+{
+    "env": {
+        "es6": true,
+        "node": true
+    },
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["import", "@typescript-eslint"],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
+    "rules": {
+        "import/order": [
+            "error",
+            {
+                "newlines-between": "always",
+                "groups": [["builtin", "external"], "parent", "sibling", "index"],
+                "warnOnUnassignedImports": true,
+                "alphabetize": {
+                    "order": "asc"
+                }
+            }
+        ]
+    }
+}
