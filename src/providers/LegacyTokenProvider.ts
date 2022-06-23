@@ -225,7 +225,6 @@ export class LegacyTokenProvider extends Provider {
             )
 
             const response = await axios.post<RpcResponseSignature[]>(
-                // 'https://mainnet-beta.solflare.network/',
                 this.rpcUrl,
                 dataChunk
             )
