@@ -11,6 +11,8 @@ export class Generator {
         newTokenMints: Map<string, Token>
     ) {
         for (const [mintAddress, token] of newTokenMints) {
+            token.logoURI = Generator.sanitizeUrl(token.logoURI)
+
             const currentToken = tokenMints.get(mintAddress)
             if (currentToken) {
                 if (!currentToken.decimals && token.decimals) {
@@ -21,6 +23,9 @@ export class Generator {
                 }
                 if (!currentToken.tags && token.tags) {
                     currentToken.tags = token.tags
+                }
+                if (!currentToken.holders && token.holders) {
+                    currentToken.holders = token.holders
                 }
                 tokenMints.set(mintAddress, currentToken)
             } else {
@@ -85,5 +90,19 @@ export class Generator {
                 return { ...token, chainId, tags: [...token.tags] }
             }),
         }
+    }
+
+    private static sanitizeUrl(string) {
+        let url
+
+        try {
+            url = new URL(string)
+        } catch (_) {
+            return null
+        }
+
+        return url.protocol === 'http:' || url.protocol === 'https:'
+            ? url
+            : null
     }
 }

@@ -1,4 +1,5 @@
 import axios, { AxiosPromise } from 'axios'
+import console from 'console'
 import _ from 'lodash'
 
 import { Provider, Tag, Token } from './provider'

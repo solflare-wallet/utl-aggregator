@@ -1,4 +1,5 @@
 import axios, { AxiosPromise } from 'axios'
+import * as console from 'console'
 import _ from 'lodash'
 
 import { Provider, Tag, Token } from './provider'
@@ -284,6 +285,7 @@ export class LegacyTokenProvider extends Provider {
             Array.from(tokenMap.keys()),
             this.throttleOpts.batchTokenHolders
         )
+
         for (const batch of batches) {
             console.log(
                 `[LTL] filter by holder ${++progress}/${batches.length}`
