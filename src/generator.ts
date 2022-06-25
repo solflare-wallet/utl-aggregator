@@ -86,7 +86,9 @@ export class Generator {
             keywords: ['solana', 'spl'],
             tags,
             timestamp: new Date().toISOString(),
-            tokens: tokensMap.tokens(),
+            tokens: tokensMap.tokens().map((token) => {
+                return { ...token, tags: [...token.tags] }
+            }),
         }
     }
 
