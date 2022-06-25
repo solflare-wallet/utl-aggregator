@@ -2,8 +2,10 @@ import axios, { AxiosPromise } from 'axios'
 import console from 'console'
 import _ from 'lodash'
 
-import { Provider, Tag, Token } from './provider'
-import { RpcRequestAccountInfo, RpcResponseAccountInfo } from './utils/rpc'
+import { ChainId, Tag, Token, TokenSet } from '../types'
+import { RpcRequestAccountInfo, RpcResponseAccountInfo } from '../utils/rpc'
+
+import { Provider } from './index'
 
 interface SimpleCoin {
     id: string
@@ -21,9 +23,10 @@ interface ThrottleOptions {
     batchCoinGecko: number
 }
 
-export class CoinGeckoProvider extends Provider {
+export class ProviderCoinGecko extends Provider {
     private readonly apiUrl = 'https://api.coingecko.com/api/v3'
     private readonly apiProUrl = 'https://pro-api.coingecko.com/api/v3'
+    private readonly chainId = ChainId.MAINNET
 
     constructor(
         private readonly apiKey: string | null,
@@ -38,8 +41,8 @@ export class CoinGeckoProvider extends Provider {
         super()
     }
 
-    async getTokens(): Promise<Map<string, Token>> {
-        const tokenMap = new Map<string, Token>()
+    async getTokens(): Promise<TokenSet> {
+        const tokenMap = new TokenSet()
 
         const tokens = await axios.get<SimpleCoin[]>(
             this.coinGeckoApiUrl(`/coins/list?include_platform=true`)
@@ -51,16 +54,19 @@ export class CoinGeckoProvider extends Provider {
                 token.platforms.solana !== undefined &&
                 token.platforms.solana.length
             ) {
-                tokenMap.set(token.platforms.solana, {
+                const t: Token = {
+                    chainId: ChainId.MAINNET,
                     name: token.name,
-                    symbol: token.symbol,
+                    symbol: token.symbol.toUpperCase(),
                     address: token.platforms.solana,
                     decimals: null,
                     logoURI: null,
                     tags: new Set<Tag>(),
                     verified: true,
                     holders: null,
-                })
+                }
+
+                tokenMap.set(t)
             }
         }
 
@@ -74,10 +80,10 @@ export class CoinGeckoProvider extends Provider {
      * check if mint and get decimals
      * @param tokenMap
      */
-    private async filterByOnChain(tokenMap: Map<string, Token>) {
+    private async filterByOnChain(tokenMap: TokenSet) {
         // Batch RPC calls
         const rpcCalls: object[] = []
-        for (const mint of tokenMap.keys()) {
+        for (const mint of tokenMap.mints()) {
             rpcCalls.push(RpcRequestAccountInfo(mint))
         }
 
@@ -104,16 +110,16 @@ export class CoinGeckoProvider extends Provider {
                     mintResponse.result.value.data.program !== 'spl-token' ||
                     mintResponse.result.value.data.parsed.type !== 'mint'
                 ) {
-                    tokenMap.delete(mintResponse.id)
+                    tokenMap.deleteByMint(mintResponse.id, this.chainId)
                     continue
                 }
 
                 // Update decimals for token
-                const token = tokenMap.get(mintResponse.id)
+                const token = tokenMap.getByMint(mintResponse.id, this.chainId)
                 if (token) {
                     token.decimals =
                         mintResponse.result.value.data.parsed.info.decimals
-                    tokenMap.set(mintResponse.id, token)
+                    tokenMap.set(token)
                 }
             }
 
@@ -129,9 +135,9 @@ export class CoinGeckoProvider extends Provider {
      * Fetch details such as logo
      * @param tokenMap
      */
-    private async fetchDetails(tokenMap: Map<string, Token>) {
+    private async fetchDetails(tokenMap: TokenSet) {
         const batches = _.chunk(
-            Array.from(tokenMap.keys()),
+            tokenMap.mints(),
             this.throttleOpts.batchCoinGecko
         )
 
@@ -164,10 +170,11 @@ export class CoinGeckoProvider extends Provider {
                         )
                     }
 
-                    const token = tokenMap.get(mintAddress)
+                    const token = tokenMap.getByMint(mintAddress, this.chainId)
+
                     if (token) {
                         token.logoURI = response.value.data.image.large
-                        tokenMap.set(mintAddress, token)
+                        tokenMap.set(token)
                     }
                 } else {
                     throw new Error(

@@ -1,26 +1,6 @@
 import fs from 'fs'
 import tempDir from 'temp-dir'
-
-export enum Tag {
-    LP_TOKEN = 'lp-token',
-}
-
-export enum ChainId {
-    MAINNET = 101,
-    TESTNET = 102,
-    DEVNET = 103,
-}
-
-export interface Token {
-    name: string
-    symbol: string
-    logoURI: string | null
-    verified: boolean
-    address: string
-    tags: Set<Tag>
-    decimals: number | null
-    holders: number | null
-}
+import { TokenSet } from 'types'
 
 export abstract class Provider {
     protected static removeCachedJSON(path: string) {
@@ -69,5 +49,5 @@ export abstract class Provider {
         }
     }
 
-    abstract getTokens(): Promise<Map<string, Token>>
+    abstract getTokens(): Promise<TokenSet>
 }

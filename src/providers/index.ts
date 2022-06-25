@@ -1,3 +1,3 @@
-export * from './provider'
-export * from './CoinGeckoProvider'
-export * from './LegacyTokenProvider'
+export * from './Provider'
+export * from './ProviderCoinGecko'
+export * from './ProviderLegacyToken'

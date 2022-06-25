@@ -2,7 +2,7 @@ import axios, { AxiosPromise } from 'axios'
 import * as console from 'console'
 import _ from 'lodash'
 
-import { Provider, Tag, Token } from './provider'
+import { Tag, TokenSet } from '../types'
 import {
     RpcRequestAccountInfo,
     RpcRequestHolders,
@@ -10,7 +10,9 @@ import {
     RpcResponseAccountInfo,
     RpcResponseHolders,
     RpcResponseSignature,
-} from './utils/rpc'
+} from '../utils/rpc'
+
+import { Provider } from './provider'
 
 interface LegacyListToken {
     chainId: number
@@ -36,7 +38,8 @@ const LARGEST_MINST = [
     '7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx', // GMT
     'foodQJAztMzX1DKpLaiounNe2BDMds5RNuPC6jsNrDG', // FOOOOOOD,
     '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', // RAY,
-    'So11111111111111111111111111111111111111112', // SOL
+    'So11111111111111111111111111111111111111112', // SOL,
+    '9LzCMqDgTKYz9Drzqnpgee3SGa89up3a247ypMj2xrqM', // AUDIO
 ]
 
 interface ThrottleOptions {
@@ -46,11 +49,7 @@ interface ThrottleOptions {
     batchTokenHolders: number
 }
 
-export class LegacyTokenProvider extends Provider {
-    private static readonly _cacheKeyLargeAccounts = 'legacy-list-large-mints'
-    private static readonly _cacheKeyRecentSignatures =
-        'legacy-list-recent-signatures'
-
+export class ProviderLegacyToken extends Provider {
     constructor(
         private readonly cdnUrl: string,
         private readonly rpcUrl: string,
@@ -68,8 +67,8 @@ export class LegacyTokenProvider extends Provider {
         super()
     }
 
-    async getTokens(): Promise<Map<string, Token>> {
-        const tokenMap = new Map<string, Token>()
+    async getTokens(): Promise<TokenSet> {
+        const tokenMap = new TokenSet()
 
         const tokens = await axios.get<LegacyList>(this.cdnUrl)
         for (let i = 0; i < tokens.data.tokens.length; i++) {
@@ -80,7 +79,8 @@ export class LegacyTokenProvider extends Provider {
                 this.chainId === token.chainId &&
                 !_.intersection(token.tags, this.skipTags).length
             ) {
-                tokenMap.set(token.address, {
+                tokenMap.set({
+                    chainId: token.chainId,
                     name: token.name,
                     symbol: token.symbol,
                     address: token.address,
@@ -109,16 +109,16 @@ export class LegacyTokenProvider extends Provider {
      * @param tokenMap
      * @param contentArray
      */
-    removeByContent(tokenMap: Map<string, Token>, contentArray: string[]) {
-        for (const [mintAddress, token] of tokenMap) {
+    removeByContent(tokenMap: TokenSet, contentArray: string[]) {
+        for (const token of tokenMap.tokens()) {
             for (const content of contentArray) {
                 if (token.name.toLowerCase().includes(content.toLowerCase())) {
-                    tokenMap.delete(mintAddress)
+                    tokenMap.deleteByToken(token)
                 }
                 if (
                     token.symbol.toLowerCase().includes(content.toLowerCase())
                 ) {
-                    tokenMap.delete(mintAddress)
+                    tokenMap.deleteByToken(token)
                 }
             }
         }
@@ -129,10 +129,10 @@ export class LegacyTokenProvider extends Provider {
      * and fetch decimals
      * @param tokenMap
      */
-    async filterAccountInfo(tokenMap: Map<string, Token>) {
+    async filterAccountInfo(tokenMap: TokenSet) {
         // Batch RPC calls
         const rpcCalls: object[] = []
-        for (const mint of tokenMap.keys()) {
+        for (const mint of tokenMap.mints()) {
             rpcCalls.push(RpcRequestAccountInfo(mint))
         }
 
@@ -158,16 +158,16 @@ export class LegacyTokenProvider extends Provider {
                     mintResponse.result.value.data.program !== 'spl-token' ||
                     mintResponse.result.value.data.parsed.type !== 'mint'
                 ) {
-                    tokenMap.delete(mintResponse.id)
+                    tokenMap.deleteByMint(mintResponse.id, this.chainId)
                     continue
                 }
 
                 // Update decimals for token
-                const token = tokenMap.get(mintResponse.id)
+                const token = tokenMap.getByMint(mintResponse.id, this.chainId)
                 if (token) {
                     token.decimals =
                         mintResponse.result.value.data.parsed.info.decimals
-                    tokenMap.set(mintResponse.id, token)
+                    tokenMap.set(token)
                 }
             }
 
@@ -184,7 +184,7 @@ export class LegacyTokenProvider extends Provider {
      * latest signature from RPC
      * @param tokenMap
      */
-    async filterLatestSignature(tokenMap: Map<string, Token>) {
+    async filterLatestSignature(tokenMap: TokenSet) {
         // Get cached recent signatures, so we can skip RPC requests for them.
         let cachedRecentSignatures = new Map<string, number>()
         try {
@@ -192,7 +192,9 @@ export class LegacyTokenProvider extends Provider {
                 Object.entries(
                     JSON.parse(
                         Provider.readCachedJSON(
-                            LegacyTokenProvider._cacheKeyRecentSignatures
+                            ProviderLegacyToken.cacheKeyRecentSignatures(
+                                this.chainId
+                            )
                         )
                     )
                 )
@@ -208,7 +210,7 @@ export class LegacyTokenProvider extends Provider {
 
         // Batch latest signature calls
         const data: object[] = []
-        for (const mint of tokenMap.keys()) {
+        for (const mint of tokenMap.mints()) {
             const cached = cachedRecentSignatures.get(mint)
             if (cached && cached > date) {
                 continue
@@ -235,7 +237,7 @@ export class LegacyTokenProvider extends Provider {
                     !mintResponse.result.length ||
                     mintResponse.result[0].blockTime < date
                 ) {
-                    tokenMap.delete(mintResponse.id)
+                    tokenMap.deleteByMint(mintResponse.id, this.chainId)
                 } else {
                     cachedRecentSignatures.set(
                         mintResponse.id,
@@ -252,7 +254,7 @@ export class LegacyTokenProvider extends Provider {
         }
 
         Provider.saveCachedJSON(
-            LegacyTokenProvider._cacheKeyRecentSignatures,
+            ProviderLegacyToken.cacheKeyRecentSignatures(this.chainId),
             JSON.stringify(Object.fromEntries(cachedRecentSignatures))
         )
     }
@@ -261,7 +263,7 @@ export class LegacyTokenProvider extends Provider {
      * Remove tokens with few accounts
      * @param tokenMap
      */
-    async filterHolders(tokenMap: Map<string, Token>) {
+    async filterHolders(tokenMap: TokenSet) {
         // Get cached largest tokens, so we can skip RPC requests for them.
         let cachedLargeTokens = new Map<string, number>()
         try {
@@ -269,7 +271,9 @@ export class LegacyTokenProvider extends Provider {
                 Object.entries(
                     JSON.parse(
                         Provider.readCachedJSON(
-                            LegacyTokenProvider._cacheKeyLargeAccounts
+                            ProviderLegacyToken.cacheKeyLargeAccounts(
+                                this.chainId
+                            )
                         )
                     )
                 )
@@ -279,10 +283,27 @@ export class LegacyTokenProvider extends Provider {
             console.log('[LTL] No cache for large mints')
         }
 
-        // Chunk them so we can parallelly send multiple RPC requests
+        const mints = tokenMap.mints()
+
+        const mintToCheck: string[] = []
+        for (const mint of mints) {
+            if (LARGEST_MINST.includes(mint) || cachedLargeTokens.has(mint)) {
+                const token = tokenMap.getByMint(mint, this.chainId)
+                if (token) {
+                    token.holders = LARGEST_MINST.includes(mint)
+                        ? 100000
+                        : (cachedLargeTokens.get(mint) as number)
+                    tokenMap.set(token)
+                }
+                continue
+            }
+            mintToCheck.push(mint)
+        }
+
+        // Chunk them so we can parallel send multiple RPC requests
         let progress = 0
         const batches = _.chunk(
-            Array.from(tokenMap.keys()),
+            mintToCheck,
             this.throttleOpts.batchTokenHolders
         )
 
@@ -294,21 +315,6 @@ export class LegacyTokenProvider extends Provider {
             const requests: AxiosPromise[] = []
 
             for (const mint of batch) {
-                if (
-                    LARGEST_MINST.includes(mint) ||
-                    cachedLargeTokens.has(mint)
-                ) {
-                    const token = tokenMap.get(mint)
-                    if (token) {
-                        token.holders = LARGEST_MINST.includes(mint)
-                            ? 100000
-                            : (cachedLargeTokens.get(mint) as number)
-                        tokenMap.set(mint, token)
-                    }
-
-                    continue
-                }
-
                 requests.push(
                     axios.post<RpcResponseHolders>(
                         this.rpcUrl,
@@ -322,29 +328,51 @@ export class LegacyTokenProvider extends Provider {
             for (const response of responses) {
                 if (response.status === 'fulfilled') {
                     const mint = response.value.data.id
+                    let count = 0
 
-                    if (!response.value.data.result) {
+                    if (response.value.data.error) {
                         console.log(
                             `[LTL] Failed RPC holders call for ${mint}`,
                             response.value.data
                         )
+
+                        if (
+                            response.value.data.error &&
+                            response.value.data.error.data.includes(
+                                'Exceeded max limit'
+                            )
+                        ) {
+                            count = 100000
+                        } else {
+                            console.log(`[LTL] Skip holder check for ${mint}`)
+                            continue
+                        }
                     }
 
-                    const count = response.value.data.result.length
+                    count = response.value.data.result.length
+
                     if (count < this.minHolders) {
-                        tokenMap.delete(mint)
+                        tokenMap.deleteByMint(mint, this.chainId)
                         continue
                     }
 
                     if (count >= 1000) {
                         cachedLargeTokens.set(mint, count)
+                        Provider.saveCachedJSON(
+                            ProviderLegacyToken.cacheKeyLargeAccounts(
+                                this.chainId
+                            ),
+                            JSON.stringify(
+                                Object.fromEntries(cachedLargeTokens)
+                            )
+                        )
                     }
 
                     // Update decimals for token
-                    const token = tokenMap.get(mint)
+                    const token = tokenMap.getByMint(mint, this.chainId)
                     if (token) {
                         token.holders = count
-                        tokenMap.set(mint, token)
+                        tokenMap.set(token)
                     }
                 } else {
                     throw new Error(
@@ -359,15 +387,22 @@ export class LegacyTokenProvider extends Provider {
                 )
             }
         }
+    }
 
-        Provider.saveCachedJSON(
-            LegacyTokenProvider._cacheKeyLargeAccounts,
-            JSON.stringify(Object.fromEntries(cachedLargeTokens))
+    public static clearCache(chainId: number) {
+        this.removeCachedJSON(
+            ProviderLegacyToken.cacheKeyLargeAccounts(chainId)
+        )
+        this.removeCachedJSON(
+            ProviderLegacyToken.cacheKeyRecentSignatures(chainId)
         )
     }
 
-    public static clearCache() {
-        this.removeCachedJSON(this._cacheKeyLargeAccounts)
-        this.removeCachedJSON(this._cacheKeyRecentSignatures)
+    private static cacheKeyLargeAccounts(chainId: number) {
+        return `legacy-list-large-mints-${chainId}`
+    }
+
+    private static cacheKeyRecentSignatures(chainId: number) {
+        return `legacy-list-recent-signatures-${chainId}`
     }
 }

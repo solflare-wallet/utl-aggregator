@@ -1,19 +1,20 @@
 import axios from 'axios'
 import axiosRetry from 'axios-retry'
 
-import { Provider, Tag, Token } from './providers'
+import { Provider } from './providers'
+import { Tag, TokenSet, TokenList } from './types'
 
 export class Generator {
     constructor(private readonly standardSources: Provider[]) {}
 
     private static upsertTokenMints(
-        tokenMints: Map<string, Token>,
-        newTokenMints: Map<string, Token>
+        tokenMints: TokenSet,
+        newTokenMints: TokenSet
     ) {
-        for (const [mintAddress, token] of newTokenMints) {
+        for (const token of newTokenMints.tokens()) {
             token.logoURI = Generator.sanitizeUrl(token.logoURI)
 
-            const currentToken = tokenMints.get(mintAddress)
+            const currentToken = tokenMints.getByToken(token)
             if (currentToken) {
                 if (!currentToken.decimals && token.decimals) {
                     currentToken.decimals = token.decimals
@@ -27,9 +28,9 @@ export class Generator {
                 if (!currentToken.holders && token.holders) {
                     currentToken.holders = token.holders
                 }
-                tokenMints.set(mintAddress, currentToken)
+                tokenMints.set(currentToken)
             } else {
-                tokenMints.set(mintAddress, token)
+                tokenMints.set(token)
             }
         }
     }
@@ -42,7 +43,7 @@ export class Generator {
             },
         })
 
-        const tokenMap = new Map<string, Token>()
+        const tokenMap = new TokenSet()
 
         let min = 0
         const id = setInterval(() => {
@@ -66,9 +67,8 @@ export class Generator {
         return tokenMap
     }
 
-    async generateTokenList(chainId: number) {
+    async generateTokenList(): Promise<TokenList> {
         const tokensMap = await this.generateTokens()
-        const tokensArray = Array.from(tokensMap.values())
 
         const tags: object = {}
         const tagNames = Object.values(Tag)
@@ -86,9 +86,7 @@ export class Generator {
             keywords: ['solana', 'spl'],
             tags,
             timestamp: new Date().toISOString(),
-            tokens: tokensArray.map((token) => {
-                return { ...token, chainId, tags: [...token.tags] }
-            }),
+            tokens: tokensMap.tokens(),
         }
     }
 
