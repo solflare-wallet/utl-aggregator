@@ -19,7 +19,7 @@ ___
 
 ## Installation
 ```shell
-npm i @solflare/utl-aggregator
+npm i @solflare-wallet/utl-aggregator
 ```
 
 ## Usage
