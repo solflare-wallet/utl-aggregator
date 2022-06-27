@@ -26,7 +26,7 @@ npm i @solflare-wallet/utl-aggregator
 Example usage can be found in [Solfare's Token List repo](https://github.com/solflare-wallet/token-list).
 
 Simple usage: 
-```javascript
+```ts
 const {
     Generator,
     ProviderCoinGecko,
@@ -114,7 +114,7 @@ and `throttleCoinGecko: 65 * 1000`
 
 With CoinGecko Pro API Key, you can increase request sizes eg. `batchCoinGecko: 400`
 
-```javascript
+```ts
     new ProviderCoinGecko(
             COINGECKO_API_KEY,
             RPC_URL,
@@ -159,7 +159,7 @@ To clear cache you can use:
 Different RPC endpoints have very different limits, to avoid `HTTP 429 Too Many Requests` try to thinker with `ThrottleOptions`.
 
 
-```javascript
+```ts
     new ProviderLegacyToken(
         CDN_URL,
         RPC_URL, // Make sure RPC Endpoint is for ChainId specified below
