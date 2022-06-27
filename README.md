@@ -15,7 +15,12 @@ Everything after that is only building on top of that, so Token List API is exte
 
 Everyone can choose what they want to use, host and consume depending on their needs and requirements.
 
-___
+
+## Related repos
+- [Token List API](https://github.com/solflare-wallet/utl-api)
+- [Token List SDK](https://github.com/solflare-wallet/utl-sdk)
+- [Solflare Token List](https://github.com/solflare-wallet/token-list)
+
 
 ## Installation
 ```shell
@@ -86,7 +91,7 @@ async function init() {
 
 init()
 ```
-___
+
 
 ## Token List Providers
 Providers are listed in an aggregator. If for example mint/token A is in both CoinGecko and Orca list, only one instance/data will be kept for the final token list, and this is determined based on whether CoinGecko or Orca is positioned higher in the list. If Orca is above CoinGecko, mint A from Orca will be kept, and CoinGecko's mint A will be ignored.
@@ -95,14 +100,14 @@ _**Built-in provider sources**_ will be the Pruned Legacy Token List and CoinGec
 CoinGecko has high barrier of entry for tokens, and is generally excellent when it comes to maintaining token list (since it's their job and business to do so).
 Legacy token list will be pruned (remove invalid mints, filtering by holders, last activity, LP tokens, scam tokens; this processed was described in Telegram chat) and transformed into the new standardized format.
 
-(To-Do)  _**External Provider sources**_ (Orca, Raydium, Saber, etc..) can host and maintain their own list of verified tokens, that aggregator can use when generating unified token list. 
+[To-Do]  _**External Provider sources**_ (Orca, Raydium, Saber, etc..) can host and maintain their own list of verified tokens, that aggregator can use when generating unified token list. 
 Each external provider will have to expose endpoint with a list of tokens they view as verified. This list will be in standardize format (which will include if token is LP-token, etc).
 
-(To-Do) Base external provider repo so any project (Orca, Raydium, Saber..) can host and expose their own verified token list with little developer effort. This allows them to serve as trusted providers for other.
+[To-Do] Base external provider repo so any project (Orca, Raydium, Saber..) can host and expose their own verified token list with little developer effort. This allows them to serve as trusted providers for other.
 
-___
 
-### - CoinGecko Provider
+
+### CoinGecko Provider
 Uses CoinGecko API to fetch all tokens with valid Solana mint address. 
 Token' logoURI is fetched from CoinGecko also, while decimal is fetched from chain.
 That is why this provider also requires Solana RPC mainnet endpoint.
@@ -129,7 +134,7 @@ With CoinGecko Pro API Key, you can increase request sizes eg. `batchCoinGecko: 
 ```
 
 
-### - Legacy Token List Provider
+### Legacy Token List Provider
 This provider uses existing token list and pulls active and relevant tokens from it.
 
 This is done in following steps:
