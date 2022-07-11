@@ -12,7 +12,7 @@ import {
     RpcResponseSignature,
 } from '../utils/rpc'
 
-import { Provider } from './provider'
+import { Provider } from './Provider'
 
 interface LegacyListToken {
     chainId: number
