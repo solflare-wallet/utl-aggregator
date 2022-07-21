@@ -64,6 +64,9 @@ export class ProviderCoinGecko extends Provider {
                     tags: new Set<Tag>(),
                     verified: true,
                     holders: null,
+                    extensions: {
+                        coingeckoId: token.id,
+                    },
                 }
 
                 tokenMap.set(t)

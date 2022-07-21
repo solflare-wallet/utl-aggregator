@@ -10,4 +10,7 @@ export interface Token {
     tags: Set<Tag>
     decimals: number | null
     holders: number | null
+    extensions?: {
+        coingeckoId: string
+    }
 }
