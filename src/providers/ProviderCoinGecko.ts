@@ -166,6 +166,7 @@ export class ProviderCoinGecko extends Provider {
                     const mintAddress = response.value.config.url
                         ?.split('/contract/')[1]
                         .substring(0, 44)
+                        .replace('?', '')
 
                     if (!mintAddress) {
                         throw new Error(
