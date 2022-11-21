@@ -1,4 +1,5 @@
 import axios from 'axios'
+import console from 'console'
 import _ from 'lodash'
 
 import { Tag, TokenSet } from '../types'
@@ -53,6 +54,7 @@ export class ProviderTrusted extends Provider {
             }
         }
 
+        console.log(`[TL] Loaded tokens from ${this.url} - ${this.chainId}`)
         return tokenMap
     }
 }
