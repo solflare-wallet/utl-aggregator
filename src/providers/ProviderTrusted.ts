@@ -10,6 +10,7 @@ interface TrustedListToken {
     chainId: number
     name: string
     symbol: string
+    decimals: number
     logoURI: string
     tags: Tag[]
     address: string
@@ -45,7 +46,7 @@ export class ProviderTrusted extends Provider {
                     name: token.name,
                     symbol: token.symbol,
                     address: token.address,
-                    decimals: null,
+                    decimals: token.decimals,
                     logoURI: token.logoURI,
                     tags: new Set<Tag>(token.tags),
                     verified: true,
