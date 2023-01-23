@@ -27,7 +27,7 @@ interface LegacyList {
     tokens: LegacyListToken[]
 }
 
-const LARGEST_MINST = [
+const LARGEST_MINTS = [
     'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
     'kinXdEcpDQeHPEuQnqmUgtYykqKGVFq6CeVX5iAHJq6', // KIN
     'XzR7CUMqhDBzbAm4aUNvwhVCxjWGn1KEvqTp3Y8fFCD', // SCAM
@@ -287,10 +287,10 @@ export class ProviderLegacyToken extends Provider {
 
         const mintToCheck: string[] = []
         for (const mint of mints) {
-            if (LARGEST_MINST.includes(mint) || cachedLargeTokens.has(mint)) {
+            if (LARGEST_MINTS.includes(mint) || cachedLargeTokens.has(mint)) {
                 const token = tokenMap.getByMint(mint, this.chainId)
                 if (token) {
-                    token.holders = LARGEST_MINST.includes(mint)
+                    token.holders = LARGEST_MINTS.includes(mint)
                         ? 100000
                         : (cachedLargeTokens.get(mint) as number)
                     tokenMap.set(token)
