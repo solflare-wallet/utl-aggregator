@@ -152,12 +152,19 @@ export class ProviderLegacyToken extends Provider {
             for (const mintResponse of response.data) {
                 // Remove token if not a mint
                 if (
+                    !mintResponse.result ||
                     !mintResponse.result.value ||
                     !mintResponse.result.value.data['parsed'] ||
                     !mintResponse.result.value.data['program'] ||
                     mintResponse.result.value.data.program !== 'spl-token' ||
                     mintResponse.result.value.data.parsed.type !== 'mint'
                 ) {
+                    if (!mintResponse.result) {
+                        console.log(
+                            `[LTL] filter by account mint ${mintResponse.id} no result (chainId: ${this.chainId})`
+                        )
+                    }
+
                     tokenMap.deleteByMint(mintResponse.id, this.chainId)
                     continue
                 }
@@ -234,9 +241,15 @@ export class ProviderLegacyToken extends Provider {
 
             for (const mintResponse of response.data) {
                 if (
+                    !mintResponse.result ||
                     !mintResponse.result.length ||
                     mintResponse.result[0].blockTime < date
                 ) {
+                    if (!mintResponse.result) {
+                        console.log(
+                            `[LTL] filter by signature mint ${mintResponse.id} no result (chainId: ${this.chainId})`
+                        )
+                    }
                     tokenMap.deleteByMint(mintResponse.id, this.chainId)
                 } else {
                     cachedRecentSignatures.set(
