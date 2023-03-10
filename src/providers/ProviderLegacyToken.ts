@@ -131,56 +131,82 @@ export class ProviderLegacyToken extends Provider {
      */
     async filterAccountInfo(tokenMap: TokenSet) {
         // Batch RPC calls
-        const rpcCalls: object[] = []
+        let rpcCalls: object[] = []
         for (const mint of tokenMap.mints()) {
             rpcCalls.push(RpcRequestAccountInfo(mint))
         }
 
         // Chunk batched requests
-        let progress = 0
-        const chunks = _.chunk(rpcCalls, this.throttleOpts.batchAccountsInfo)
-        for (const dataChunk of chunks) {
-            console.log(
-                `[LTL] filter by account info ${++progress}/${chunks.length}`
+        while (rpcCalls.length > 0) {
+            let progress = 0
+            const chunks = _.chunk(
+                rpcCalls,
+                this.throttleOpts.batchAccountsInfo
             )
+            rpcCalls = []
+            for (const dataChunk of chunks) {
+                console.log(
+                    `[LTL] filter by account info ${++progress}/${
+                        chunks.length
+                    }`
+                )
 
-            const response = await axios.post<RpcResponseAccountInfo[]>(
-                this.rpcUrl,
-                dataChunk
-            )
+                const response = await axios.post<RpcResponseAccountInfo[]>(
+                    this.rpcUrl,
+                    dataChunk
+                )
 
-            for (const mintResponse of response.data) {
-                // Remove token if not a mint
-                if (
-                    !mintResponse.result ||
-                    !mintResponse.result.value ||
-                    !mintResponse.result.value.data['parsed'] ||
-                    !mintResponse.result.value.data['program'] ||
-                    mintResponse.result.value.data.program !== 'spl-token' ||
-                    mintResponse.result.value.data.parsed.type !== 'mint'
-                ) {
-                    if (!mintResponse.result) {
-                        console.log(
-                            `[LTL] filter by account mint ${mintResponse.id} no result (chainId: ${this.chainId})`
-                        )
+                console.log(
+                    `[LTL] filter by account info ${++progress}/${
+                        chunks.length
+                    }`
+                )
+
+                for (const mintResponse of response.data) {
+                    // Remove token if not a mint
+                    if (
+                        !mintResponse.result ||
+                        !mintResponse.result.value ||
+                        !mintResponse.result.value.data['parsed'] ||
+                        !mintResponse.result.value.data['program'] ||
+                        mintResponse.result.value.data.program !==
+                            'spl-token' ||
+                        mintResponse.result.value.data.parsed.type !== 'mint'
+                    ) {
+                        if (!mintResponse.result) {
+                            console.log(
+                                `[LTL] filter by account mint ${mintResponse.id} no result (chainId: ${this.chainId})`
+                            )
+                            rpcCalls.push(
+                                RpcRequestAccountInfo(mintResponse.id)
+                            )
+                        } else {
+                            tokenMap.deleteByMint(mintResponse.id, this.chainId)
+                        }
+                        continue
                     }
 
-                    tokenMap.deleteByMint(mintResponse.id, this.chainId)
-                    continue
+                    // Update decimals for token
+                    const token = tokenMap.getByMint(
+                        mintResponse.id,
+                        this.chainId
+                    )
+                    if (token) {
+                        token.decimals =
+                            mintResponse.result.value.data.parsed.info.decimals
+                        tokenMap.set(token)
+                    }
                 }
 
-                // Update decimals for token
-                const token = tokenMap.getByMint(mintResponse.id, this.chainId)
-                if (token) {
-                    token.decimals =
-                        mintResponse.result.value.data.parsed.info.decimals
-                    tokenMap.set(token)
+                if (this.throttleOpts.throttle > 0) {
+                    await new Promise((f) =>
+                        setTimeout(f, this.throttleOpts.throttle)
+                    )
                 }
             }
-
-            if (this.throttleOpts.throttle > 0) {
-                await new Promise((f) =>
-                    setTimeout(f, this.throttleOpts.throttle)
+            if (rpcCalls.length > 0) {
+                console.log(
+                    `[LTL] filter by account mint, retry ${rpcCalls.length} failed requests (chainId: ${this.chainId})`
                 )
             }
         }
@@ -216,52 +242,64 @@ export class ProviderLegacyToken extends Provider {
             Math.ceil(Date.now() / 1000) - this.signatureDays * 24 * 60 * 60
 
         // Batch latest signature calls
-        const data: object[] = []
+        let rpcCalls: object[] = []
         for (const mint of tokenMap.mints()) {
             const cached = cachedRecentSignatures.get(mint)
             if (cached && cached > date) {
                 continue
             }
 
-            data.push(RpcRequestSignature(mint))
+            rpcCalls.push(RpcRequestSignature(mint))
         }
 
-        // Chunk batches
-        let progress = 0
-        const chunks = _.chunk(data, this.throttleOpts.batchSignatures)
-        for (const dataChunk of chunks) {
-            console.log(
-                `[LTL] filter by signature ${++progress}/${chunks.length}`
-            )
+        while (rpcCalls.length > 0) {
+            // Chunk batches
+            let progress = 0
+            const chunks = _.chunk(rpcCalls, this.throttleOpts.batchSignatures)
+            rpcCalls = []
+            for (const dataChunk of chunks) {
+                console.log(
+                    `[LTL] filter by signature ${++progress}/${
+                        chunks.length
+                    } (chainId: ${this.chainId})`
+                )
 
-            const response = await axios.post<RpcResponseSignature[]>(
-                this.rpcUrl,
-                dataChunk
-            )
+                const response = await axios.post<RpcResponseSignature[]>(
+                    this.rpcUrl,
+                    dataChunk
+                )
 
-            for (const mintResponse of response.data) {
-                if (
-                    !mintResponse.result ||
-                    !mintResponse.result.length ||
-                    mintResponse.result[0].blockTime < date
-                ) {
-                    if (!mintResponse.result) {
-                        console.log(
-                            `[LTL] filter by signature mint ${mintResponse.id} no result (chainId: ${this.chainId})`
+                for (const mintResponse of response.data) {
+                    if (
+                        !mintResponse.result ||
+                        !mintResponse.result.length ||
+                        mintResponse.result[0].blockTime < date
+                    ) {
+                        if (!mintResponse.result) {
+                            console.log(
+                                `[LTL] filter by signature mint ${mintResponse.id} no result, retry (chainId: ${this.chainId})`
+                            )
+                            rpcCalls.push(RpcRequestSignature(mintResponse.id))
+                        } else {
+                            tokenMap.deleteByMint(mintResponse.id, this.chainId)
+                        }
+                    } else {
+                        cachedRecentSignatures.set(
+                            mintResponse.id,
+                            mintResponse.result[0].blockTime
                         )
                     }
-                    tokenMap.deleteByMint(mintResponse.id, this.chainId)
-                } else {
-                    cachedRecentSignatures.set(
-                        mintResponse.id,
-                        mintResponse.result[0].blockTime
+                }
+
+                if (this.throttleOpts.throttle > 0) {
+                    await new Promise((f) =>
+                        setTimeout(f, this.throttleOpts.throttle)
                     )
                 }
             }
-
-            if (this.throttleOpts.throttle > 0) {
-                await new Promise((f) =>
-                    setTimeout(f, this.throttleOpts.throttle)
+            if (rpcCalls.length > 0) {
+                console.log(
+                    `[LTL] filter by signature, retry ${rpcCalls.length} failed requests (chainId: ${this.chainId})`
                 )
             }
         }
