@@ -58,37 +58,41 @@ export class Generator {
         const tokenMap = new TokenSet()
 
         let min = 0
+
         const id = setInterval(() => {
             console.log(`====> Minute: ${++min}`)
         }, 60 * 1000)
 
-        // Add tokens from standard sources
-        const results = await Promise.allSettled(
-            this.standardSources.map((source) => source.getTokens())
-        )
-        for (const result of results) {
-            if (result.status === 'fulfilled') {
-                Generator.upsertTokenMints(tokenMap, result.value)
-            } else {
-                console.log(`Generate failed ${result.reason}`)
-                throw new Error(`Generate failed ${result.reason}`)
+        try {
+            // Add tokens from standard sources
+            const results = await Promise.allSettled(
+                this.standardSources.map((source) => source.getTokens())
+            )
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    Generator.upsertTokenMints(tokenMap, result.value)
+                } else {
+                    console.log(`Generate failed ${result.reason}`)
+                    throw new Error(`Generate standard failed ${result.reason}`)
+                }
             }
-        }
 
-        // Remove tokens from ignore sources
-        const resultsIgnore = await Promise.allSettled(
-            this.ignoreSources.map((source) => source.getTokens())
-        )
-        for (const result of resultsIgnore) {
-            if (result.status === 'fulfilled') {
-                Generator.removeTokenMints(tokenMap, result.value)
-            } else {
-                console.log(`Generate failed ${result.reason}`)
-                throw new Error(`Generate failed ${result.reason}`)
+            // Remove tokens from ignore sources
+            const resultsIgnore = await Promise.allSettled(
+                this.ignoreSources.map((source) => source.getTokens())
+            )
+            for (const result of resultsIgnore) {
+                if (result.status === 'fulfilled') {
+                    Generator.removeTokenMints(tokenMap, result.value)
+                } else {
+                    console.log(`Generate failed ${result.reason}`)
+                    throw new Error(`Generate ignore failed ${result.reason}`)
+                }
             }
+        } catch (e) {
+            clearInterval(id)
+            throw e
         }
-
-        clearInterval(id)
 
         return tokenMap
     }
