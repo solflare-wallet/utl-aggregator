@@ -94,6 +94,7 @@ export class Generator {
             throw e
         }
 
+        clearInterval(id)
         return tokenMap
     }
 
