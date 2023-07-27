@@ -5,7 +5,10 @@ import { Provider } from './providers'
 import { Tag, TokenSet, TokenList } from './types'
 
 export class Generator {
-    constructor(private readonly standardSources: Provider[]) {}
+    constructor(
+        private readonly standardSources: Provider[],
+        private readonly ignoreSources: Provider[]
+    ) {}
 
     private static upsertTokenMints(
         tokenMints: TokenSet,
@@ -35,6 +38,15 @@ export class Generator {
         }
     }
 
+    private static removeTokenMints(
+        tokenMints: TokenSet,
+        newTokenMints: TokenSet
+    ) {
+        for (const token of newTokenMints.tokens()) {
+            tokenMints.deleteByToken(token)
+        }
+    }
+
     async generateTokens() {
         axiosRetry(axios, {
             retries: 3,
@@ -50,14 +62,28 @@ export class Generator {
             console.log(`====> Minute: ${++min}`)
         }, 60 * 1000)
 
+        // Add tokens from standard sources
         const results = await Promise.allSettled(
             this.standardSources.map((source) => source.getTokens())
         )
-
         for (const result of results) {
             if (result.status === 'fulfilled') {
                 Generator.upsertTokenMints(tokenMap, result.value)
             } else {
+                console.log(`Generate failed ${result.reason}`)
+                throw new Error(`Generate failed ${result.reason}`)
+            }
+        }
+
+        // Remove tokens from ignore sources
+        const resultsIgnore = await Promise.allSettled(
+            this.ignoreSources.map((source) => source.getTokens())
+        )
+        for (const result of resultsIgnore) {
+            if (result.status === 'fulfilled') {
+                Generator.removeTokenMints(tokenMap, result.value)
+            } else {
+                console.log(`Generate failed ${result.reason}`)
                 throw new Error(`Generate failed ${result.reason}`)
             }
         }

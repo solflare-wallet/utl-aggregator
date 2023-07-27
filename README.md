@@ -42,6 +42,8 @@ import {
   Generator,
   ProviderCoinGecko,
   ProviderLegacyToken,
+  ProviderTrusted,
+  ProviderIgnore,
   ChainId,
   Tag,
 } from "@solflare-wallet/utl-aggregator";
@@ -96,7 +98,25 @@ async function main() {
       // Keep tokens with more than 100 holders
       100
     ),
-  ])
+    new ProviderTrusted(
+      'https://raw.githubusercontent.com/solflare-wallet/token-list/master/trusted-tokenlist.json',
+      // Filter out by tags, eg. remove Liquidity Pool (LP) tokens
+      [Tag.LP_TOKEN],
+        // Filter by chainId
+      ChainId.MAINNET,
+    ),
+  ],
+  [
+      new ProviderIgnore(
+          'https://raw.githubusercontent.com/solflare-wallet/token-list/master/ignore-tokenlist.json',
+          // Filter out by tags
+          [],
+          // Filter by chainId
+          ChainId.MAINNET,
+      ),
+  ]
+  )
+    
 
   const tokenList = await generator.generateTokenList()
 
