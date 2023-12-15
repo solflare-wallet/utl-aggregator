@@ -110,7 +110,9 @@ export class ProviderCoinGecko extends Provider {
                     !mintResponse.result.value ||
                     !mintResponse.result.value.data['parsed'] ||
                     !mintResponse.result.value.data['program'] ||
-                    mintResponse.result.value.data.program !== 'spl-token' ||
+                    (mintResponse.result.value.data.program !== 'spl-token' &&
+                        mintResponse.result.value.data.program !==
+                            'spl-token-2022') ||
                     mintResponse.result.value.data.parsed.type !== 'mint'
                 ) {
                     tokenMap.deleteByMint(mintResponse.id, this.chainId)

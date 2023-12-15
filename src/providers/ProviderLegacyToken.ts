@@ -169,8 +169,10 @@ export class ProviderLegacyToken extends Provider {
                         !mintResponse.result.value ||
                         !mintResponse.result.value.data['parsed'] ||
                         !mintResponse.result.value.data['program'] ||
-                        mintResponse.result.value.data.program !==
-                            'spl-token' ||
+                        (mintResponse.result.value.data.program !==
+                            'spl-token' &&
+                            mintResponse.result.value.data.program !==
+                                'spl-token-2022') ||
                         mintResponse.result.value.data.parsed.type !== 'mint'
                     ) {
                         if (!mintResponse.result) {
