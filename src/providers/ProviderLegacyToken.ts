@@ -68,7 +68,7 @@ export class ProviderLegacyToken extends Provider {
     }
 
     async getTokens(): Promise<TokenSet> {
-        const tokenMap = new TokenSet()
+        const tokenMap = new TokenSet('LegacyProvider')
 
         const tokens = await axios.get<LegacyList>(this.cdnUrl)
         for (let i = 0; i < tokens.data.tokens.length; i++) {
@@ -157,9 +157,7 @@ export class ProviderLegacyToken extends Provider {
                 )
 
                 console.log(
-                    `[LTL] filter by account info ${++progress}/${
-                        chunks.length
-                    }`
+                    `[LTL] filter by account info done ${progress}/${chunks.length}`
                 )
 
                 for (const mintResponse of response.data) {

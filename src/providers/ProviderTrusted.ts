@@ -30,7 +30,7 @@ export class ProviderTrusted extends Provider {
     }
 
     async getTokens(): Promise<TokenSet> {
-        const tokenMap = new TokenSet()
+        const tokenMap = new TokenSet('TrustedProvider')
 
         const tokens = await axios.get<TrustedList>(this.url)
         for (let i = 0; i < tokens.data.tokens.length; i++) {

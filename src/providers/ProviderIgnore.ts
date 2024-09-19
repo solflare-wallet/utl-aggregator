@@ -30,7 +30,7 @@ export class ProviderIgnore extends Provider {
     }
 
     async getTokens(): Promise<TokenSet> {
-        const tokenMap = new TokenSet()
+        const tokenMap = new TokenSet('IgnoreProvider')
 
         const tokens = await axios.get<IgnoreList>(this.url)
         for (let i = 0; i < tokens.data.tokens.length; i++) {

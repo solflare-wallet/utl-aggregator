@@ -26,10 +26,19 @@ export class Generator {
                     currentToken.logoURI = token.logoURI
                 }
                 if (!currentToken.tags && token.tags) {
-                    currentToken.tags = token.tags
+                    currentToken.tags = new Set([
+                        ...currentToken.tags,
+                        ...token.tags,
+                    ])
                 }
                 if (!currentToken.holders && token.holders) {
                     currentToken.holders = token.holders
+                }
+                if (token.extensions !== undefined) {
+                    currentToken.extensions = {
+                        ...currentToken.extensions,
+                        ...token.extensions,
+                    }
                 }
                 tokenMints.set(currentToken)
             } else {
@@ -55,7 +64,7 @@ export class Generator {
             },
         })
 
-        const tokenMap = new TokenSet()
+        const tokenMap = new TokenSet('List')
 
         let min = 0
 
@@ -70,8 +79,15 @@ export class Generator {
             )
             for (const result of results) {
                 if (result.status === 'fulfilled') {
+                    const lastCount = tokenMap.tokens().length
                     Generator.upsertTokenMints(tokenMap, result.value)
+                    console.log(
+                        result.value.sourceName(),
+                        'upsert count:',
+                        tokenMap.tokens().length - lastCount
+                    )
                 } else {
+                    console.log(JSON.stringify(result, null, 2))
                     console.log(`Generate failed ${result.reason}`)
                     throw new Error(`Generate standard failed ${result.reason}`)
                 }

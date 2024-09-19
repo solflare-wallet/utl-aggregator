@@ -42,7 +42,7 @@ export class ProviderCoinGecko extends Provider {
     }
 
     async getTokens(): Promise<TokenSet> {
-        const tokenMap = new TokenSet()
+        const tokenMap = new TokenSet('CoinGeckoProvider')
 
         const tokens = await axios.get<SimpleCoin[]>(
             this.coinGeckoApiUrl(`/coins/list?include_platform=true`)

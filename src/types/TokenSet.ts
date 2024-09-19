@@ -1,7 +1,10 @@
 import { Token } from './index'
 
 export class TokenSet {
-    constructor(private map = new Map<string, Token>()) {}
+    constructor(
+        private source: string,
+        private map = new Map<string, Token>()
+    ) {}
 
     protected static tokenKey(mint: string, chainId: number) {
         return `${mint}:${chainId}`
@@ -9,6 +12,10 @@ export class TokenSet {
 
     protected static keyToMint(key: string) {
         return key.split(':')[0]
+    }
+
+    sourceName(): string {
+        return this.source
     }
 
     mints(): string[] {
