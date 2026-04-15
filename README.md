@@ -27,7 +27,7 @@ Everyone can choose what they want to use, host and consume depending on their n
 
 ## Installation
 ```shell
-npm i @solflare-wallet/utl-aggregator
+pnpm add @solflare-wallet/utl-aggregator
 ```
 
 ## Usage
